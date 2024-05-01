@@ -879,31 +879,3 @@ document.addEventListener('DOMContentLoaded', function () {
 
 
 // My Code
-
-
-document.addEventListener("DOMContentLoaded", function() {
-    var wechatIcon = document.getElementsByClassName("fab fa-weixin");
-    console.log(wechatIcon)
-    console.log("Mouse over WeChat icon")
-    // 创建并设置微信二维码图片元素
-    var wechatQRCode = document.createElement("img");
-    wechatQRCode.src = "/img/WeChat.jpg"; // 替换为你的微信二维码图片路径
-    wechatQRCode.alt = "WeChat QR Code";
-    wechatQRCode.style.display = "none"; // 初始状态隐藏
-    
-    // 将微信二维码图片元素添加到页面中
-    document.body.appendChild(wechatQRCode);
-    wechatQRCode.style.display = "block"
-    // 鼠标悬停在微信图标上时显示微信二维码图片
-    wechatIcon.addEventListener("mouseover", function() {
-        wechatQRCode.style.display = "block"; // 显示微信二维码图片
-        console.log("Mouse over WeChat icon"); // 添加测试代码，打印信息到控制台
-    });
-    
-    // 鼠标移开微信图标时隐藏微信二维码图片
-    wechatIcon.addEventListener("mouseout", function() {
-        wechatQRCode.style.display = "none"; // 隐藏微信二维码图片
-        console.log("Mouse out of WeChat icon"); // 添加测试代码，打印信息到控制台
-    });
-});
-
