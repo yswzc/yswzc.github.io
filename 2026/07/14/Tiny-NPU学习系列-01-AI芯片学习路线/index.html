@@ -1,0 +1,800 @@
+<!DOCTYPE html><html lang="zh-CN" data-theme="light"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width, initial-scale=1.0,viewport-fit=cover"><title>Tiny-NPU学习系列-01-AI芯片学习路线 | 云上我最菜の博客</title><meta name="author" content="云上我最菜,yswzc_loading@163.com"><meta name="copyright" content="云上我最菜"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#ffffff"><meta name="description" content="tiny-NPU AI芯片学习路线Tiny-NPU学习系列-00-导读Tiny-NPU学习系列-01-AI芯片学习路线Tiny-NPU学习系列-02-sram_dp双端口SRAMTiny-NPU学习系列-03-banked_sram多Bank存储Tiny-NPU学习系列-04-kv_cache_bank缓存模块Tiny-NPU学习系列-05-vec_engine向量计算引擎Tiny-NPU学习系列">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Tiny-NPU学习系列-01-AI芯片学习路线">
+<meta property="og:url" content="http://yswzc.github.io/2026/07/14/Tiny-NPU%E5%AD%A6%E4%B9%A0%E7%B3%BB%E5%88%97-01-AI%E8%8A%AF%E7%89%87%E5%AD%A6%E4%B9%A0%E8%B7%AF%E7%BA%BF/index.html">
+<meta property="og:site_name" content="云上我最菜の博客">
+<meta property="og:description" content="tiny-NPU AI芯片学习路线Tiny-NPU学习系列-00-导读Tiny-NPU学习系列-01-AI芯片学习路线Tiny-NPU学习系列-02-sram_dp双端口SRAMTiny-NPU学习系列-03-banked_sram多Bank存储Tiny-NPU学习系列-04-kv_cache_bank缓存模块Tiny-NPU学习系列-05-vec_engine向量计算引擎Tiny-NPU学习系列">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="http://yswzc.github.io/img/avatar.jpg">
+<meta property="article:published_time" content="2026-07-14T01:00:00.000Z">
+<meta property="article:modified_time" content="2026-09-02T15:02:46.029Z">
+<meta property="article:author" content="云上我最菜">
+<meta property="article:tag" content="Tiny-NPU">
+<meta property="article:tag" content="NPU">
+<meta property="article:tag" content="AI芯片">
+<meta property="article:tag" content="Verilog">
+<meta property="article:tag" content="学习路线">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="http://yswzc.github.io/img/avatar.jpg"><script type="application/ld+json">{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "Tiny-NPU学习系列-01-AI芯片学习路线",
+  "url": "http://yswzc.github.io/2026/07/14/Tiny-NPU%E5%AD%A6%E4%B9%A0%E7%B3%BB%E5%88%97-01-AI%E8%8A%AF%E7%89%87%E5%AD%A6%E4%B9%A0%E8%B7%AF%E7%BA%BF/",
+  "image": "http://yswzc.github.io/img/avatar.jpg",
+  "datePublished": "2026-07-14T01:00:00.000Z",
+  "dateModified": "2026-09-02T15:02:46.029Z",
+  "author": [
+    {
+      "@type": "Person",
+      "name": "云上我最菜",
+      "url": "http://yswzc.github.io"
+    }
+  ]
+}</script><link rel="shortcut icon" href="/img/favicon.jpg"><link rel="canonical" href="http://yswzc.github.io/2026/07/14/Tiny-NPU%E5%AD%A6%E4%B9%A0%E7%B3%BB%E5%88%97-01-AI%E8%8A%AF%E7%89%87%E5%AD%A6%E4%B9%A0%E8%B7%AF%E7%BA%BF/index.html"><link rel="preconnect" href="//cdn.jsdelivr.net"/><link rel="preconnect" href="//busuanzi.ibruce.info"/><link rel="stylesheet" href="/css/index.css?v=5.5.4"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@7.1.0/css/all.min.css"><script>
+    (() => {
+      
+    const saveToLocal = {
+      set: (key, value, ttl) => {
+        if (!ttl) return
+        const expiry = Date.now() + ttl * 86400000
+        localStorage.setItem(key, JSON.stringify({ value, expiry }))
+      },
+      get: key => {
+        const itemStr = localStorage.getItem(key)
+        if (!itemStr) return undefined
+        const { value, expiry } = JSON.parse(itemStr)
+        if (Date.now() > expiry) {
+          localStorage.removeItem(key)
+          return undefined
+        }
+        return value
+      }
+    }
+
+    window.btf = {
+      saveToLocal,
+      getScript: (url, attr = {}) => new Promise((resolve, reject) => {
+        const script = document.createElement('script')
+        script.src = url
+        script.async = true
+        Object.entries(attr).forEach(([key, val]) => script.setAttribute(key, val))
+        script.onload = script.onreadystatechange = () => {
+          if (!script.readyState || /loaded|complete/.test(script.readyState)) resolve()
+        }
+        script.onerror = reject
+        document.head.appendChild(script)
+      }),
+      getCSS: (url, id) => new Promise((resolve, reject) => {
+        const link = document.createElement('link')
+        link.rel = 'stylesheet'
+        link.href = url
+        if (id) link.id = id
+        link.onload = link.onreadystatechange = () => {
+          if (!link.readyState || /loaded|complete/.test(link.readyState)) resolve()
+        }
+        link.onerror = reject
+        document.head.appendChild(link)
+      }),
+      addGlobalFn: (key, fn, name = false, parent = window) => {
+        if (!false && key.startsWith('pjax')) return
+        const globalFn = parent.globalFn || {}
+        globalFn[key] = globalFn[key] || {}
+        globalFn[key][name || Object.keys(globalFn[key]).length] = fn
+        parent.globalFn = globalFn
+      }
+    }
+  
+      
+      const activateDarkMode = () => {
+        document.documentElement.setAttribute('data-theme', 'dark')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0d0d0d')
+        }
+      }
+      const activateLightMode = () => {
+        document.documentElement.setAttribute('data-theme', 'light')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#ffffff')
+        }
+      }
+
+      btf.activateDarkMode = activateDarkMode
+      btf.activateLightMode = activateLightMode
+
+      const theme = saveToLocal.get('theme')
+    
+          theme === 'dark' ? activateDarkMode() : theme === 'light' ? activateLightMode() : null
+        
+      
+      const asideStatus = saveToLocal.get('aside-status')
+      if (asideStatus !== undefined) {
+        document.documentElement.classList.toggle('hide-aside', asideStatus === 'hide')
+      }
+    
+      
+    const detectApple = () => {
+      if (/iPad|iPhone|iPod|Macintosh/.test(navigator.userAgent)) {
+        document.documentElement.classList.add('apple')
+      }
+    }
+    detectApple()
+  
+    })()
+  </script><script>const GLOBAL_CONFIG = {
+  root: '/',
+  algolia: undefined,
+  localSearch: undefined,
+  translate: {"defaultEncoding":2,"translateDelay":0,"msgToTraditionalChinese":"繁","msgToSimplifiedChinese":"簡"},
+  highlight: {"plugin":"highlight.js","highlightCopy":true,"highlightLang":true,"highlightHeightLimit":false,"highlightFullpage":false,"highlightMacStyle":false},
+  copy: {
+    success: '复制成功',
+    error: '复制失败',
+    noSupport: '浏览器不支持'
+  },
+  relativeDate: {
+    homepage: false,
+    post: false
+  },
+  runtime: '',
+  dateSuffix: {
+    just: '刚刚',
+    min: '分钟前',
+    hour: '小时前',
+    day: '天前',
+    month: '个月前'
+  },
+  copyright: undefined,
+  lightbox: 'null',
+  Snackbar: undefined,
+  infinitegrid: {
+    js: 'https://cdn.jsdelivr.net/npm/@egjs/infinitegrid@4.13.0/dist/infinitegrid.min.js',
+    buttonText: '加载更多'
+  },
+  isPhotoFigcaption: false,
+  islazyloadPlugin: false,
+  isAnchor: false,
+  percent: {
+    toc: true,
+    rightside: false,
+  },
+  autoDarkmode: false
+}</script><script id="config-diff">var GLOBAL_CONFIG_SITE = {
+  title: 'Tiny-NPU学习系列-01-AI芯片学习路线',
+  isHighlightShrink: false,
+  isToc: true,
+  pageType: 'post'
+}</script><meta name="generator" content="Hexo 7.3.0"></head><body><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="avatar-img text-center"><img src="/img/avatar.jpg" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="site-data text-center"><a href="/archives/"><div class="headline">文章</div><div class="length-num">15</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">28</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">5</div></a></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 主页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 时间链</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><span class="site-page group"><i class="fa-fw fas fa-list"></i><span> 清单</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><li><a class="site-page child" href="/music/"><i class="fa-fw fas fa-music"></i><span> 音乐</span></a></li><li><a class="site-page child" href="/movies/"><i class="fa-fw fas fa-video"></i><span> 电影</span></a></li></ul></div><div class="menus_item"><a class="site-page" href="/link/"><i class="fa-fw fas fa-link"></i><span> 友链</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> 关于</span></a></div></div></div></div><div class="post" id="body-wrap"><header class="post-bg" id="page-header" style="background-image: url(/img/home_page.jpg);"><nav id="nav"><span id="blog-info"><a class="nav-site-title" href="/"><span class="site-name">云上我最菜の博客</span></a><a class="nav-page-title" href="/"><span class="site-name">Tiny-NPU学习系列-01-AI芯片学习路线</span><span class="site-name"><i class="fa-solid fa-circle-arrow-left"></i><span>  返回首页</span></span></a></span><div id="menus"><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 主页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 时间链</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><span class="site-page group"><i class="fa-fw fas fa-list"></i><span> 清单</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><li><a class="site-page child" href="/music/"><i class="fa-fw fas fa-music"></i><span> 音乐</span></a></li><li><a class="site-page child" href="/movies/"><i class="fa-fw fas fa-video"></i><span> 电影</span></a></li></ul></div><div class="menus_item"><a class="site-page" href="/link/"><i class="fa-fw fas fa-link"></i><span> 友链</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> 关于</span></a></div></div><div id="toggle-menu"><span class="site-page"><i class="fas fa-bars fa-fw"></i></span></div></div></nav><div id="post-info"><h1 class="post-title">Tiny-NPU学习系列-01-AI芯片学习路线</h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">发表于</span><time class="post-meta-date-created" datetime="2026-07-14T01:00:00.000Z" title="发表于 2026-07-14 09:00:00">2026-07-14</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">更新于</span><time class="post-meta-date-updated" datetime="2026-09-02T15:02:46.029Z" title="更新于 2026-09-02 23:02:46">2026-09-02</time></span><span class="post-meta-categories"><span class="post-meta-separator">|</span><i class="fas fa-inbox fa-fw post-meta-icon"></i><a class="post-meta-categories" href="/categories/Tiny-NPU%E5%AD%A6%E4%B9%A0%E7%B3%BB%E5%88%97/">Tiny-NPU学习系列</a></span></div><div class="meta-secondline"><span class="post-meta-separator">|</span><span class="post-meta-pv-cv" id="" data-flag-title=""><i class="far fa-eye fa-fw post-meta-icon"></i><span class="post-meta-label">浏览量:</span><span id="busuanzi_value_page_pv"><i class="fa-solid fa-spinner fa-spin"></i></span></span></div></div></div></header><main class="layout" id="content-inner"><div id="post"><article class="container post-content" id="article-container"><h1 id="tiny-NPU-AI芯片学习路线"><a href="#tiny-NPU-AI芯片学习路线" class="headerlink" title="tiny-NPU AI芯片学习路线"></a>tiny-NPU AI芯片学习路线</h1><ol class="series-items"><li><a href="/2026/07/10/Tiny-NPU%E5%AD%A6%E4%B9%A0%E7%B3%BB%E5%88%97-00-%E5%AF%BC%E8%AF%BB/" title="Tiny-NPU学习系列-00-导读">Tiny-NPU学习系列-00-导读</a></li><li><a href="/2026/07/14/Tiny-NPU%E5%AD%A6%E4%B9%A0%E7%B3%BB%E5%88%97-01-AI%E8%8A%AF%E7%89%87%E5%AD%A6%E4%B9%A0%E8%B7%AF%E7%BA%BF/" title="Tiny-NPU学习系列-01-AI芯片学习路线">Tiny-NPU学习系列-01-AI芯片学习路线</a></li><li><a href="/2026/07/14/Tiny-NPU%E5%AD%A6%E4%B9%A0%E7%B3%BB%E5%88%97-02-sram-dp%E5%8F%8C%E7%AB%AF%E5%8F%A3SRAM/" title="Tiny-NPU学习系列-02-sram_dp双端口SRAM">Tiny-NPU学习系列-02-sram_dp双端口SRAM</a></li><li><a href="/2026/07/14/Tiny-NPU%E5%AD%A6%E4%B9%A0%E7%B3%BB%E5%88%97-03-banked-sram%E5%A4%9ABank%E5%AD%98%E5%82%A8/" title="Tiny-NPU学习系列-03-banked_sram多Bank存储">Tiny-NPU学习系列-03-banked_sram多Bank存储</a></li><li><a href="/2026/07/14/Tiny-NPU%E5%AD%A6%E4%B9%A0%E7%B3%BB%E5%88%97-04-kv-cache-bank%E7%BC%93%E5%AD%98%E6%A8%A1%E5%9D%97/" title="Tiny-NPU学习系列-04-kv_cache_bank缓存模块">Tiny-NPU学习系列-04-kv_cache_bank缓存模块</a></li><li><a href="/2026/07/14/Tiny-NPU%E5%AD%A6%E4%B9%A0%E7%B3%BB%E5%88%97-05-vec-engine%E5%90%91%E9%87%8F%E8%AE%A1%E7%AE%97%E5%BC%95%E6%93%8E/" title="Tiny-NPU学习系列-05-vec_engine向量计算引擎">Tiny-NPU学习系列-05-vec_engine向量计算引擎</a></li><li><a href="/2026/09/02/Tiny-NPU%E5%AD%A6%E4%B9%A0%E7%B3%BB%E5%88%97-06-gelu-engine%E6%BF%80%E6%B4%BB%E5%87%BD%E6%95%B0%E5%BC%95%E6%93%8E/" title="Tiny-NPU学习系列-06-gelu_engine激活函数引擎">Tiny-NPU学习系列-06-gelu_engine激活函数引擎</a></li></ol>
+
+<blockquote>
+<p>目标：基于 tiny-NPU 项目，从会写 Verilog 和会仿真的基础出发，逐步理解一个小型 AI 加速器的存储、算子、GEMM、DMA、微码控制和 Transformer 映射。</p>
+</blockquote>
+<h2 id="快速导航"><a href="#快速导航" class="headerlink" title="快速导航"></a>快速导航</h2><ul>
+<li><ol start="0">
+<li>学习方法</li>
+</ol>
+</li>
+<li><ol>
+<li>存储系统 SRAM</li>
+</ol>
+</li>
+<li><ol start="2">
+<li>简单算子 Engine</li>
+</ol>
+</li>
+<li><ol start="3">
+<li>GEMM 与脉动阵列</li>
+</ol>
+</li>
+<li><ol start="4">
+<li>DMA 与 AXI</li>
+</ol>
+</li>
+<li><ol start="5">
+<li>微码控制与调度</li>
+</ol>
+</li>
+<li><ol start="6">
+<li>Transformer Block 映射</li>
+</ol>
+</li>
+<li><ol start="7">
+<li>ONNX Graph Mode</li>
+</ol>
+</li>
+<li><ol start="8">
+<li>每周安排</li>
+</ol>
+</li>
+<li><ol start="9">
+<li>模块复盘模板</li>
+</ol>
+</li>
+</ul>
+<h2 id="总体架构图"><a href="#总体架构图" class="headerlink" title="总体架构图"></a>总体架构图</h2><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">flowchart LR</span><br><span class="line">    DDR[&quot;外部 DDR&quot;] --&gt; DMA[&quot;AXI DMA&quot;]</span><br><span class="line">    DMA --&gt; SRAM0[&quot;SRAM0: activations/weights&quot;]</span><br><span class="line">    DMA --&gt; SRAM1[&quot;SRAM1: residual/LN beta&quot;]</span><br><span class="line">    SRAM0 --&gt; Engines[&quot;算子 engines&quot;]</span><br><span class="line">    SRAM1 --&gt; Engines</span><br><span class="line">    Engines --&gt; SRAM0</span><br><span class="line">    UCODE[&quot;Microcode SRAM&quot;] --&gt; Fetch[&quot;ucode_fetch&quot;]</span><br><span class="line">    Fetch --&gt; Decode[&quot;ucode_decode&quot;]</span><br><span class="line">    Decode --&gt; Engines</span><br><span class="line">    Decode --&gt; DMA</span><br><span class="line">    Engines --&gt; Scoreboard[&quot;scoreboard/barrier&quot;]</span><br><span class="line">    Scoreboard --&gt; Decode</span><br></pre></td></tr></table></figure>
+
+<h2 id="0-学习方法"><a href="#0-学习方法" class="headerlink" title="0. 学习方法"></a>0. 学习方法</h2><p>每看一个模块，都按这个固定问题拆：</p>
+<ul>
+<li><input disabled="" type="checkbox"> 这个模块解决什么问题？</li>
+<li><input disabled="" type="checkbox"> 输入输出端口有哪些？谁驱动它？它驱动谁？</li>
+<li><input disabled="" type="checkbox"> 有没有 FSM？每个状态做什么？</li>
+<li><input disabled="" type="checkbox"> 哪些信号打一拍？为什么打一拍？</li>
+<li><input disabled="" type="checkbox"> 数据从哪里读？写到哪里？</li>
+<li><input disabled="" type="checkbox"> <code>valid/ready/busy/done</code> 的语义是什么？</li>
+<li><input disabled="" type="checkbox"> 我能不能给它写一个最小 testbench？</li>
+<li><input disabled="" type="checkbox"> 它在完整 NPU 数据流里处于什么位置？</li>
+</ul>
+<p>建议 Obsidian 笔记结构：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line">obsidian/</span><br><span class="line">  tiny-NPU-AI芯片学习路线.md</span><br><span class="line">  模块笔记/</span><br><span class="line">    sram_dp.md</span><br><span class="line">    banked_sram.md</span><br><span class="line">    vec_engine.md</span><br><span class="line">    gemm_ctrl.md</span><br><span class="line">    axi_dma_rd.md</span><br><span class="line">    ucode_decode.md</span><br><span class="line">  波形复盘/</span><br><span class="line">    sram_dp_读写波形.md</span><br><span class="line">    vec_engine_读算写波形.md</span><br></pre></td></tr></table></figure>
+
+<h2 id="1-存储系统-SRAM"><a href="#1-存储系统-SRAM" class="headerlink" title="1. 存储系统 SRAM"></a>1. 存储系统 SRAM</h2><h3 id="目标"><a href="#目标" class="headerlink" title="目标"></a>目标</h3><p>理解片上 SRAM 为什么是 AI 芯片最重要的基础模块之一。</p>
+<h3 id="重点文件"><a href="#重点文件" class="headerlink" title="重点文件"></a>重点文件</h3><ul>
+<li><code>rtl/mem/sram_dp.sv</code></li>
+<li><code>rtl/mem/banked_sram.sv</code></li>
+<li><code>rtl/mem/kv_cache_bank.sv</code></li>
+<li><code>tb/sram_dp_tb.sv</code></li>
+</ul>
+<h3 id="必须搞懂"><a href="#必须搞懂" class="headerlink" title="必须搞懂"></a>必须搞懂</h3><ul>
+<li><input checked="" disabled="" type="checkbox"> 同步 SRAM 读为什么需要等时钟边沿？</li>
+<li><input checked="" disabled="" type="checkbox"> <code>write-first</code> 是什么？</li>
+<li><input checked="" disabled="" type="checkbox"> 双端口 SRAM 为什么可以一边读一边写？</li>
+<li><input checked="" disabled="" type="checkbox"> <code>banked_sram</code> 里为什么要保存 <code>rd_bank_idx_d</code>？</li>
+<li><input checked="" disabled="" type="checkbox"> 读请求和读数据如何对齐？</li>
+<li><input checked="" disabled="" type="checkbox"> 如果写端有 <code>wr_done</code>，为什么通常也要打一拍？</li>
+</ul>
+<h3 id="动手任务"><a href="#动手任务" class="headerlink" title="动手任务"></a>动手任务</h3><ul>
+<li><input checked="" disabled="" type="checkbox"> 写 <code>sram_dp_tb.sv</code>，测试读写、write-first、双端口同周期读写。</li>
+<li><input checked="" disabled="" type="checkbox"> 写 <code>banked_sram_tb.sv</code>。</li>
+<li><input disabled="" type="checkbox"> 画一张 <code>rd_en -&gt; rd_valid -&gt; rd_data</code> 的波形图。</li>
+<li><input disabled="" type="checkbox"> 画一张 <code>wr_en -&gt; mem updated -&gt; wr_done</code> 的波形图。</li>
+</ul>
+<h3 id="输出笔记"><a href="#输出笔记" class="headerlink" title="输出笔记"></a>输出笔记</h3><ul>
+<li><a href="/2026/07/14/Tiny-NPU%E5%AD%A6%E4%B9%A0%E7%B3%BB%E5%88%97-02-sram-dp%E5%8F%8C%E7%AB%AF%E5%8F%A3SRAM/">sram_dp</a></li>
+<li><a href="/2026/07/14/Tiny-NPU%E5%AD%A6%E4%B9%A0%E7%B3%BB%E5%88%97-03-banked-sram%E5%A4%9ABank%E5%AD%98%E5%82%A8/">banked_sram</a></li>
+<li><a href="/2026/07/14/Tiny-NPU%E5%AD%A6%E4%B9%A0%E7%B3%BB%E5%88%97-04-kv-cache-bank%E7%BC%93%E5%AD%98%E6%A8%A1%E5%9D%97/">kv_cache_bank</a></li>
+</ul>
+<h2 id="2-简单算子-Engine"><a href="#2-简单算子-Engine" class="headerlink" title="2. 简单算子 Engine"></a>2. 简单算子 Engine</h2><h3 id="目标-1"><a href="#目标-1" class="headerlink" title="目标"></a>目标</h3><p>理解一个 AI 算子如何被硬件 FSM 拆成“读 SRAM -&gt; 计算 -&gt; 写 SRAM”。</p>
+<h3 id="建议顺序"><a href="#建议顺序" class="headerlink" title="建议顺序"></a>建议顺序</h3><ol>
+<li><code>rtl/ops/vec_engine.sv</code></li>
+<li><code>rtl/ops/gelu_engine.sv</code></li>
+<li><code>rtl/ops/layernorm_engine.sv</code></li>
+<li><code>rtl/ops/softmax_engine.sv</code></li>
+</ol>
+<h3 id="必须搞懂-1"><a href="#必须搞懂-1" class="headerlink" title="必须搞懂"></a>必须搞懂</h3><ul>
+<li><input disabled="" type="checkbox"> <code>cmd_valid</code> 如何启动 engine？</li>
+<li><input disabled="" type="checkbox"> <code>busy</code> 和 <code>done</code> 分别表示什么？</li>
+<li><input disabled="" type="checkbox"> SRAM 读数据延迟如何被 FSM 处理？</li>
+<li><input disabled="" type="checkbox"> INT8 饱和加法怎么实现？</li>
+<li><input disabled="" type="checkbox"> GELU&#x2F;Softmax 里为什么会用 LUT？</li>
+<li><input disabled="" type="checkbox"> LayerNorm 为什么需要 mean&#x2F;variance&#x2F;requantize？</li>
+</ul>
+<h3 id="推荐仿真"><a href="#推荐仿真" class="headerlink" title="推荐仿真"></a>推荐仿真</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">cd</span> sim/verilator/build</span><br><span class="line">./engine_sim</span><br></pre></td></tr></table></figure>
+
+<h3 id="输出笔记-1"><a href="#输出笔记-1" class="headerlink" title="输出笔记"></a>输出笔记</h3><ul>
+<li><a href="/2026/07/14/Tiny-NPU%E5%AD%A6%E4%B9%A0%E7%B3%BB%E5%88%97-05-vec-engine%E5%90%91%E9%87%8F%E8%AE%A1%E7%AE%97%E5%BC%95%E6%93%8E/">vec_engine</a></li>
+<li><a href="/2026/09/02/Tiny-NPU%E5%AD%A6%E4%B9%A0%E7%B3%BB%E5%88%97-06-gelu-engine%E6%BF%80%E6%B4%BB%E5%87%BD%E6%95%B0%E5%BC%95%E6%93%8E/">gelu_engine</a></li>
+<li>layernorm_engine</li>
+<li>softmax_engine</li>
+<li>算子Engine通用FSM</li>
+</ul>
+<h2 id="3-GEMM-与脉动阵列"><a href="#3-GEMM-与脉动阵列" class="headerlink" title="3. GEMM 与脉动阵列"></a>3. GEMM 与脉动阵列</h2><h3 id="目标-2"><a href="#目标-2" class="headerlink" title="目标"></a>目标</h3><p>理解 AI 芯片核心计算单元：矩阵乘和 systolic array。</p>
+<h3 id="重点文件-1"><a href="#重点文件-1" class="headerlink" title="重点文件"></a>重点文件</h3><ul>
+<li><code>rtl/gemm/mac_int8.sv</code></li>
+<li><code>rtl/gemm/mac_fp16.sv</code></li>
+<li><code>rtl/gemm/pe.sv</code></li>
+<li><code>rtl/gemm/systolic_array.sv</code></li>
+<li><code>rtl/gemm/gemm_ctrl.sv</code></li>
+<li><code>rtl/gemm/gemm_post.sv</code></li>
+</ul>
+<h3 id="必须搞懂-2"><a href="#必须搞懂-2" class="headerlink" title="必须搞懂"></a>必须搞懂</h3><ul>
+<li><input disabled="" type="checkbox"> <code>INT8 x INT8 -&gt; INT32 accumulator</code> 为什么合理？</li>
+<li><input disabled="" type="checkbox"> PE 里有哪些寄存器？</li>
+<li><input disabled="" type="checkbox"> A&#x2F;B 数据如何在阵列里流动？</li>
+<li><input disabled="" type="checkbox"> 什么是 weight-stationary？</li>
+<li><input disabled="" type="checkbox"> <code>gemm_ctrl</code> 如何从 SRAM 喂数据？</li>
+<li><input disabled="" type="checkbox"> <code>gemm_post</code> 为什么要把 INT32 重新量化回 INT8？</li>
+</ul>
+<h3 id="推荐练习"><a href="#推荐练习" class="headerlink" title="推荐练习"></a>推荐练习</h3><ul>
+<li><input disabled="" type="checkbox"> 手画一个 <code>4x4</code> systolic array 的数据流。</li>
+<li><input disabled="" type="checkbox"> 用一个 <code>2x2</code> 矩阵例子手算输出。</li>
+<li><input disabled="" type="checkbox"> 对照仿真波形看 MAC accumulate 的过程。</li>
+</ul>
+<h3 id="输出笔记-2"><a href="#输出笔记-2" class="headerlink" title="输出笔记"></a>输出笔记</h3><ul>
+<li>MAC</li>
+<li>PE</li>
+<li>systolic_array</li>
+<li>gemm_ctrl</li>
+<li>gemm_post</li>
+</ul>
+<h2 id="4-DMA-与-AXI"><a href="#4-DMA-与-AXI" class="headerlink" title="4. DMA 与 AXI"></a>4. DMA 与 AXI</h2><h3 id="目标-3"><a href="#目标-3" class="headerlink" title="目标"></a>目标</h3><p>理解外部 DDR 数据如何搬运到片上 SRAM。</p>
+<h3 id="重点文件-2"><a href="#重点文件-2" class="headerlink" title="重点文件"></a>重点文件</h3><ul>
+<li><code>rtl/bus/axi_dma_rd.sv</code></li>
+<li><code>rtl/bus/axi_dma_wr.sv</code></li>
+<li><code>rtl/bus/axi_lite_regs.sv</code></li>
+<li><code>rtl/bus/axi_types.sv</code></li>
+</ul>
+<h3 id="必须搞懂-3"><a href="#必须搞懂-3" class="headerlink" title="必须搞懂"></a>必须搞懂</h3><ul>
+<li><input disabled="" type="checkbox"> AXI read address channel: <code>ARVALID/ARREADY</code></li>
+<li><input disabled="" type="checkbox"> AXI read data channel: <code>RVALID/RREADY/RLAST</code></li>
+<li><input disabled="" type="checkbox"> AXI write address&#x2F;data&#x2F;response 三个通道怎么配合？</li>
+<li><input disabled="" type="checkbox"> DMA 为什么要拆 burst？</li>
+<li><input disabled="" type="checkbox"> 为什么 AXI burst 不能跨 4KB 边界？</li>
+<li><input disabled="" type="checkbox"> <code>cmd_valid/cmd_ready</code> 和 AXI handshake 的关系是什么？</li>
+</ul>
+<h3 id="当前项目注意点"><a href="#当前项目注意点" class="headerlink" title="当前项目注意点"></a>当前项目注意点</h3><ul>
+<li><code>axi_dma_rd.sv</code> 触发过 Verilator <code>SYNCASYNCNET</code> warning。</li>
+<li>当前采用局部 Verilator lint suppress，而不是全局关掉 warning。</li>
+<li>如果后续 DMA&#x2F;reset 行为异常，要优先回顾这里。</li>
+</ul>
+<h3 id="输出笔记-3"><a href="#输出笔记-3" class="headerlink" title="输出笔记"></a>输出笔记</h3><ul>
+<li>AXI基础</li>
+<li>axi_dma_rd</li>
+<li>axi_dma_wr</li>
+<li>reset策略</li>
+</ul>
+<h2 id="5-微码控制与调度"><a href="#5-微码控制与调度" class="headerlink" title="5. 微码控制与调度"></a>5. 微码控制与调度</h2><h3 id="目标-4"><a href="#目标-4" class="headerlink" title="目标"></a>目标</h3><p>理解 NPU 如何用一条条 128-bit microcode 指令调度各个 engine。</p>
+<h3 id="重点文件-3"><a href="#重点文件-3" class="headerlink" title="重点文件"></a>重点文件</h3><ul>
+<li><code>rtl/pkg/isa_pkg.sv</code></li>
+<li><code>rtl/ctrl/ucode_fetch.sv</code></li>
+<li><code>rtl/ctrl/ucode_decode.sv</code></li>
+<li><code>rtl/ctrl/scoreboard.sv</code></li>
+<li><code>rtl/ctrl/barrier.sv</code></li>
+<li><code>rtl/top.sv</code></li>
+</ul>
+<h3 id="必须搞懂-4"><a href="#必须搞懂-4" class="headerlink" title="必须搞懂"></a>必须搞懂</h3><ul>
+<li><input disabled="" type="checkbox"> 一条 128-bit 指令里有哪些字段？</li>
+<li><input disabled="" type="checkbox"> fetch 如何从 ucode SRAM 读指令？</li>
+<li><input disabled="" type="checkbox"> decode 如何产生各个 engine 的 command？</li>
+<li><input disabled="" type="checkbox"> scoreboard 为什么能防止资源冲突？</li>
+<li><input disabled="" type="checkbox"> barrier 的作用是什么？</li>
+<li><input disabled="" type="checkbox"> <code>program_end</code> 如何让系统停止？</li>
+</ul>
+<h3 id="推荐仿真-1"><a href="#推荐仿真-1" class="headerlink" title="推荐仿真"></a>推荐仿真</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">cd</span> sim/verilator/build</span><br><span class="line">./npu_sim</span><br><span class="line">./integration_sim</span><br></pre></td></tr></table></figure>
+
+<h3 id="输出笔记-4"><a href="#输出笔记-4" class="headerlink" title="输出笔记"></a>输出笔记</h3><ul>
+<li>ISA</li>
+<li>ucode_fetch</li>
+<li>ucode_decode</li>
+<li>scoreboard</li>
+<li>top数据流</li>
+</ul>
+<h2 id="6-Transformer-Block-映射"><a href="#6-Transformer-Block-映射" class="headerlink" title="6. Transformer Block 映射"></a>6. Transformer Block 映射</h2><h3 id="目标-5"><a href="#目标-5" class="headerlink" title="目标"></a>目标</h3><p>理解模型计算图如何映射到 NPU 的 SRAM + engine + microcode。</p>
+<h3 id="重点文件-4"><a href="#重点文件-4" class="headerlink" title="重点文件"></a>重点文件</h3><ul>
+<li><code>sim/verilator/gpt2_block_top.sv</code></li>
+<li><code>sim/verilator/tb_gpt2_block.cpp</code></li>
+<li><code>python/golden/gpt2_infer_golden.py</code></li>
+<li><code>python/golden/gpt2_block_ref.py</code></li>
+</ul>
+<h3 id="GPT-2-Block-数据流"><a href="#GPT-2-Block-数据流" class="headerlink" title="GPT-2 Block 数据流"></a>GPT-2 Block 数据流</h3><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">flowchart TD</span><br><span class="line">    X[&quot;Input X&quot;] --&gt; LN1[&quot;LayerNorm 1&quot;]</span><br><span class="line">    LN1 --&gt; QKV[&quot;Q/K/V GEMM&quot;]</span><br><span class="line">    QKV --&gt; ATT[&quot;Attention Scores&quot;]</span><br><span class="line">    ATT --&gt; SM[&quot;Softmax&quot;]</span><br><span class="line">    SM --&gt; AV[&quot;Attention * V&quot;]</span><br><span class="line">    AV --&gt; WO[&quot;Output Projection Wo&quot;]</span><br><span class="line">    WO --&gt; R1[&quot;Residual Add: X + WO&quot;]</span><br><span class="line">    R1 --&gt; LN2[&quot;LayerNorm 2&quot;]</span><br><span class="line">    LN2 --&gt; FFN1[&quot;FFN Up GEMM&quot;]</span><br><span class="line">    FFN1 --&gt; GELU[&quot;GELU&quot;]</span><br><span class="line">    GELU --&gt; FFN2[&quot;FFN Down GEMM&quot;]</span><br><span class="line">    FFN2 --&gt; R2[&quot;Residual Add: X2 + FFN2&quot;]</span><br></pre></td></tr></table></figure>
+
+<h3 id="必须搞懂-5"><a href="#必须搞懂-5" class="headerlink" title="必须搞懂"></a>必须搞懂</h3><ul>
+<li><input disabled="" type="checkbox"> 为什么要 Q&#x2F;K&#x2F;V 三组 GEMM？</li>
+<li><input disabled="" type="checkbox"> Attention score 的形状是什么？</li>
+<li><input disabled="" type="checkbox"> Softmax 输出如何再乘 V？</li>
+<li><input disabled="" type="checkbox"> Residual add 为什么需要 SRAM0 和 SRAM1 同时读？</li>
+<li><input disabled="" type="checkbox"> Python golden model 如何作为硬件验证参考？</li>
+</ul>
+<h3 id="推荐仿真-2"><a href="#推荐仿真-2" class="headerlink" title="推荐仿真"></a>推荐仿真</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">cd</span> sim/verilator/build</span><br><span class="line">./gpt2_block_sim</span><br></pre></td></tr></table></figure>
+
+<h3 id="输出笔记-5"><a href="#输出笔记-5" class="headerlink" title="输出笔记"></a>输出笔记</h3><ul>
+<li>GPT2 Block</li>
+<li>Attention硬件映射</li>
+<li>Residual路径</li>
+<li>Python Golden Model</li>
+</ul>
+<h2 id="7-ONNX-Graph-Mode"><a href="#7-ONNX-Graph-Mode" class="headerlink" title="7. ONNX Graph Mode"></a>7. ONNX Graph Mode</h2><h3 id="目标-6"><a href="#目标-6" class="headerlink" title="目标"></a>目标</h3><p>理解通用计算图如何编译成 NPU 可执行指令和 tensor descriptor。</p>
+<h3 id="重点文件-5"><a href="#重点文件-5" class="headerlink" title="重点文件"></a>重点文件</h3><ul>
+<li><code>rtl/graph/graph_top.sv</code></li>
+<li><code>rtl/graph/graph_fetch.sv</code></li>
+<li><code>rtl/graph/graph_decode.sv</code></li>
+<li><code>rtl/graph/graph_dispatch.sv</code></li>
+<li><code>rtl/graph/tensor_table.sv</code></li>
+<li><code>python/onnx_compiler/compile.py</code></li>
+</ul>
+<h3 id="必须搞懂-6"><a href="#必须搞懂-6" class="headerlink" title="必须搞懂"></a>必须搞懂</h3><ul>
+<li><input disabled="" type="checkbox"> ONNX model 如何变成 graph artifacts？</li>
+<li><input disabled="" type="checkbox"> tensor descriptor 记录了哪些信息？</li>
+<li><input disabled="" type="checkbox"> graph ISA 和 LLM microcode 有什么区别？</li>
+<li><input disabled="" type="checkbox"> Graph Mode 如何调度不同算子 engine？</li>
+<li><input disabled="" type="checkbox"> scoreboard 如何支持 DMA + GEMM overlap？</li>
+</ul>
+<h3 id="推荐仿真-3"><a href="#推荐仿真-3" class="headerlink" title="推荐仿真"></a>推荐仿真</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">cd</span> /Users/lizhi/Documents/PhD/Github/tiny-NPU</span><br><span class="line">python3 python/onnx_compiler/gen_mlp_onnx.py</span><br><span class="line">python3 python/onnx_compiler/compile.py \</span><br><span class="line">    --model models/mlp_32_16_8.onnx \</span><br><span class="line">    --outdir sim/verilator/build/graph</span><br><span class="line"></span><br><span class="line"><span class="built_in">cd</span> sim/verilator/build</span><br><span class="line">./onnx_smoke_sim --datadir graph</span><br></pre></td></tr></table></figure>
+
+<h3 id="输出笔记-6"><a href="#输出笔记-6" class="headerlink" title="输出笔记"></a>输出笔记</h3><ul>
+<li>ONNX Graph Mode</li>
+<li>tensor_table</li>
+<li>graph_dispatch</li>
+<li>ONNX编译器</li>
+</ul>
+<h2 id="8-每周安排"><a href="#8-每周安排" class="headerlink" title="8. 每周安排"></a>8. 每周安排</h2><h3 id="Week-1-SRAM-与波形"><a href="#Week-1-SRAM-与波形" class="headerlink" title="Week 1: SRAM 与波形"></a>Week 1: SRAM 与波形</h3><ul>
+<li><input disabled="" type="checkbox"> 读 <code>sram_dp.sv</code></li>
+<li><input disabled="" type="checkbox"> 跑 <code>tb/sram_dp_tb.sv</code></li>
+<li><input disabled="" type="checkbox"> 写 <code>banked_sram_tb.sv</code></li>
+<li><input disabled="" type="checkbox"> 输出 SRAM读写时序</li>
+</ul>
+<h3 id="Week-2-Vec-GELU-LayerNorm"><a href="#Week-2-Vec-GELU-LayerNorm" class="headerlink" title="Week 2: Vec&#x2F;GELU&#x2F;LayerNorm"></a>Week 2: Vec&#x2F;GELU&#x2F;LayerNorm</h3><ul>
+<li><input disabled="" type="checkbox"> 读 <code>vec_engine.sv</code></li>
+<li><input disabled="" type="checkbox"> 读 <code>gelu_engine.sv</code></li>
+<li><input disabled="" type="checkbox"> 读 <code>layernorm_engine.sv</code></li>
+<li><input disabled="" type="checkbox"> 跑 <code>./engine_sim</code></li>
+<li><input disabled="" type="checkbox"> 输出 算子Engine通用FSM</li>
+</ul>
+<h3 id="Week-3-GEMM"><a href="#Week-3-GEMM" class="headerlink" title="Week 3: GEMM"></a>Week 3: GEMM</h3><ul>
+<li><input disabled="" type="checkbox"> 读 <code>mac_int8.sv</code></li>
+<li><input disabled="" type="checkbox"> 读 <code>pe.sv</code></li>
+<li><input disabled="" type="checkbox"> 读 <code>systolic_array.sv</code></li>
+<li><input disabled="" type="checkbox"> 读 <code>gemm_ctrl.sv</code></li>
+<li><input disabled="" type="checkbox"> 手画 <code>4x4</code> systolic 数据流</li>
+<li><input disabled="" type="checkbox"> 输出 systolic_array</li>
+</ul>
+<h3 id="Week-4-DMA-AXI"><a href="#Week-4-DMA-AXI" class="headerlink" title="Week 4: DMA&#x2F;AXI"></a>Week 4: DMA&#x2F;AXI</h3><ul>
+<li><input disabled="" type="checkbox"> 学 AXI valid&#x2F;ready</li>
+<li><input disabled="" type="checkbox"> 读 <code>axi_dma_rd.sv</code></li>
+<li><input disabled="" type="checkbox"> 读 <code>axi_dma_wr.sv</code></li>
+<li><input disabled="" type="checkbox"> 画 DMA read burst 时序</li>
+<li><input disabled="" type="checkbox"> 输出 axi_dma_rd</li>
+</ul>
+<h3 id="Week-5-Microcode-控制"><a href="#Week-5-Microcode-控制" class="headerlink" title="Week 5: Microcode 控制"></a>Week 5: Microcode 控制</h3><ul>
+<li><input disabled="" type="checkbox"> 读 <code>isa_pkg.sv</code></li>
+<li><input disabled="" type="checkbox"> 读 <code>ucode_fetch.sv</code></li>
+<li><input disabled="" type="checkbox"> 读 <code>ucode_decode.sv</code></li>
+<li><input disabled="" type="checkbox"> 读 <code>scoreboard.sv</code></li>
+<li><input disabled="" type="checkbox"> 跑 <code>./npu_sim</code></li>
+<li><input disabled="" type="checkbox"> 输出 ucode_decode</li>
+</ul>
+<h3 id="Week-6-GPT-2-Block"><a href="#Week-6-GPT-2-Block" class="headerlink" title="Week 6: GPT-2 Block"></a>Week 6: GPT-2 Block</h3><ul>
+<li><input disabled="" type="checkbox"> 读 <code>gpt2_block_top.sv</code></li>
+<li><input disabled="" type="checkbox"> 读 <code>tb_gpt2_block.cpp</code></li>
+<li><input disabled="" type="checkbox"> 读 <code>gpt2_block_ref.py</code></li>
+<li><input disabled="" type="checkbox"> 跑 <code>./gpt2_block_sim</code></li>
+<li><input disabled="" type="checkbox"> 输出 GPT2 Block</li>
+</ul>
+<h3 id="Week-7-ONNX-与性能"><a href="#Week-7-ONNX-与性能" class="headerlink" title="Week 7+: ONNX 与性能"></a>Week 7+: ONNX 与性能</h3><ul>
+<li><input disabled="" type="checkbox"> 跑 <code>onnx_smoke_sim</code></li>
+<li><input disabled="" type="checkbox"> 读 <code>graph_dispatch.sv</code></li>
+<li><input disabled="" type="checkbox"> 读 <code>compile.py</code></li>
+<li><input disabled="" type="checkbox"> 理解 tensor descriptor</li>
+<li><input disabled="" type="checkbox"> 输出 ONNX Graph Mode</li>
+</ul>
+<h2 id="9-模块复盘模板"><a href="#9-模块复盘模板" class="headerlink" title="9. 模块复盘模板"></a>9. 模块复盘模板</h2><p>复制下面模板，为每个模块单独建一篇笔记。</p>
+<figure class="highlight markdown"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br></pre></td><td class="code"><pre><span class="line">---</span><br><span class="line">title: 模块名</span><br><span class="line">tags:</span><br><span class="line"><span class="bullet">  -</span> tiny-npu/module</span><br><span class="line"><span class="section">status: draft</span></span><br><span class="line"><span class="section">---</span></span><br><span class="line"></span><br><span class="line"><span class="section"># 模块名</span></span><br><span class="line"></span><br><span class="line"><span class="section">## 这个模块解决什么问题？</span></span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="section">## 输入输出端口</span></span><br><span class="line"></span><br><span class="line">| 信号 | 方向 | 含义 | 时序 |</span><br><span class="line">|---|---|---|---|</span><br><span class="line">| clk | input | 时钟 | posedge |</span><br><span class="line"></span><br><span class="line"><span class="section">## 内部状态/FSM</span></span><br><span class="line"></span><br><span class="line"><span class="code">```mermaid</span></span><br><span class="line"><span class="code">stateDiagram-v2</span></span><br><span class="line"><span class="code">    IDLE --&gt; RUN</span></span><br><span class="line"><span class="code">    RUN --&gt; DONE</span></span><br><span class="line"><span class="code">    DONE --&gt; IDLE</span></span><br></pre></td></tr></table></figure>
+
+<h2 id="关键时序"><a href="#关键时序" class="headerlink" title="关键时序"></a>关键时序</h2><h2 id="数据流"><a href="#数据流" class="headerlink" title="数据流"></a>数据流</h2><h2 id="我不懂的问题"><a href="#我不懂的问题" class="headerlink" title="我不懂的问题"></a>我不懂的问题</h2><ul>
+<li><input disabled="" type="checkbox"> </li>
+</ul>
+<h2 id="和其他模块的关系"><a href="#和其他模块的关系" class="headerlink" title="和其他模块的关系"></a>和其他模块的关系</h2><ul>
+<li>上游：</li>
+<li>下游：</li>
+</ul>
+<h2 id="仿真-波形记录"><a href="#仿真-波形记录" class="headerlink" title="仿真&#x2F;波形记录"></a>仿真&#x2F;波形记录</h2><ul>
+<li>VCD：</li>
+<li>结论：<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line">## 10. 当前环境记录</span><br><span class="line"></span><br><span class="line">### Python 环境</span><br><span class="line"></span><br><span class="line">```text</span><br><span class="line">conda env: pytorch</span><br><span class="line">python: 3.10.18</span><br><span class="line">numpy/scipy/torch/transformers/onnx/huggingface_hub/safetensors 已可 import</span><br></pre></td></tr></table></figure></li>
+</ul>
+<h3 id="RTL-仿真工具"><a href="#RTL-仿真工具" class="headerlink" title="RTL 仿真工具"></a>RTL 仿真工具</h3><figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">iverilog: installed</span><br><span class="line">gtkwave: installed</span><br><span class="line">cmake: installed</span><br><span class="line">verilator: installed</span><br></pre></td></tr></table></figure>
+
+<h3 id="已知修改记录"><a href="#已知修改记录" class="headerlink" title="已知修改记录"></a>已知修改记录</h3><ul>
+<li><code>rtl/bus/axi_dma_rd.sv</code> 对 <code>SYNCASYNCNET</code> 做了局部 Verilator lint suppress。</li>
+<li>原因：Verilator 认为 <code>top.u_dma_rd.rst_n</code> 存在同步&#x2F;异步 reset 混用风险。</li>
+<li>如果后续 DMA&#x2F;reset&#x2F;Verilator lint 出问题，优先回顾这处修改。</li>
+</ul>
+</article><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta"><i class="fas fa-circle-user fa-fw"></i>文章作者: </span><span class="post-copyright-info"><a href="http://yswzc.github.io">云上我最菜</a></span></div><div class="post-copyright__type"><span class="post-copyright-meta"><i class="fas fa-square-arrow-up-right fa-fw"></i>文章链接: </span><span class="post-copyright-info"><a href="http://yswzc.github.io/2026/07/14/Tiny-NPU%E5%AD%A6%E4%B9%A0%E7%B3%BB%E5%88%97-01-AI%E8%8A%AF%E7%89%87%E5%AD%A6%E4%B9%A0%E8%B7%AF%E7%BA%BF/">http://yswzc.github.io/2026/07/14/Tiny-NPU%E5%AD%A6%E4%B9%A0%E7%B3%BB%E5%88%97-01-AI%E8%8A%AF%E7%89%87%E5%AD%A6%E4%B9%A0%E8%B7%AF%E7%BA%BF/</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta"><i class="fas fa-circle-exclamation fa-fw"></i>版权声明: </span><span class="post-copyright-info">本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明来源 <a href="http://yswzc.github.io" target="_blank">云上我最菜の博客</a>！</span></div></div><div class="tag_share"><div class="post-meta__tag-list"><a class="post-meta__tags" href="/tags/Tiny-NPU/">Tiny-NPU</a><a class="post-meta__tags" href="/tags/NPU/">NPU</a><a class="post-meta__tags" href="/tags/AI%E8%8A%AF%E7%89%87/">AI芯片</a><a class="post-meta__tags" href="/tags/Verilog/">Verilog</a><a class="post-meta__tags" href="/tags/%E5%AD%A6%E4%B9%A0%E8%B7%AF%E7%BA%BF/">学习路线</a></div><div class="post-share"><div class="social-share" data-image="/img/avatar.jpg" data-sites="facebook,x,wechat,weibo,qq"></div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1.1.6/sharejs/dist/css/share.min.css" media="print" onload="this.media='all'"><script src="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1.1.6/sharejs/dist/js/social-share.min.js" defer></script></div></div><nav class="pagination-post" id="pagination"><a class="pagination-related" href="/2026/07/14/Tiny-NPU%E5%AD%A6%E4%B9%A0%E7%B3%BB%E5%88%97-02-sram-dp%E5%8F%8C%E7%AB%AF%E5%8F%A3SRAM/" title="Tiny-NPU学习系列-02-sram_dp双端口SRAM"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info"><div class="info-1"><div class="info-item-1">上一篇</div><div class="info-item-2">Tiny-NPU学习系列-02-sram_dp双端口SRAM</div></div><div class="info-2"><div class="info-item-1">sram_dp 双端口 SRAMTiny-NPU学习系列-00-导读Tiny-NPU学习系列-01-AI芯片学习路线Tiny-NPU学习系列-02-sram_dp双端口SRAMTiny-NPU学习系列-03-banked_sram多Bank存储Tiny-NPU学习系列-04-kv_cache_bank缓存模块Tiny-NPU学习系列-05-vec_engine向量计算引擎Tiny-NPU学习系列-06-gelu_engine激活函数引擎   这是一个双端口的SRAM，可以同时支持一个端口写与一个端口读； 另外这个SRAM是write-first定义，也就是在写数据时，也会把写入的数据同时输出到dout端口，对应的就是下面这几行代码：1234if (we_a) begin	mem[addr_a] &lt;= din_a;	dout_a &lt;= din_a;end 下面是关于这个模块的仿真波形图  </div></div></div></a><a class="pagination-related" href="/2026/07/10/Tiny-NPU%E5%AD%A6%E4%B9%A0%E7%B3%BB%E5%88%97-00-%E5%AF%BC%E8%AF%BB/" title="Tiny-NPU学习系列-00-导读"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-right"><div class="info-1"><div class="info-item-1">下一篇</div><div class="info-item-2">Tiny-NPU学习系列-00-导读</div></div><div class="info-2"><div class="info-item-1">写在前面这个系列用来系统记录 Tiny-NPU 的学习过程：从 NPU 的基本概念、Tiny-NPU 项目的整体架构，到计算单元、片上存储、数据流、控制逻辑、仿真验证与综合实现，逐步拆解一个小型神经网络加速器的设计方法。 我希望这个系列不是零散的代码记录，而是能把“为什么这样设计”和“硬件上怎么落地”讲清楚。后续每一篇会尽量围绕一个具体问题展开，并保留关键代码、波形、实验现象和踩坑记录。 系列目录Tiny-NPU学习系列-00-导读Tiny-NPU学习系列-01-AI芯片学习路线Tiny-NPU学习系列-02-sram_dp双端口SRAMTiny-NPU学习系列-03-banked_sram多Bank存储Tiny-NPU学习系列-04-kv_cache_bank缓存模块Tiny-NPU学习系列-05-vec_engine向量计算引擎Tiny-NPU学习系列-06-gelu_engine激活函数引擎  已迁移内容00 导读建立系列目标，整理学习路线和后续文章结构。 01 AI 芯片学习路线基于 Tiny-NPU 项目，整理从 SRAM、算子 Engine、GEMM、DMA&#x2F...</div></div></div></a></nav><div class="relatedPosts"><div class="headline"><i class="fas fa-thumbs-up fa-fw"></i><span>相关推荐</span></div><div class="relatedPosts-list"><a class="pagination-related" href="/2026/07/14/Tiny-NPU%E5%AD%A6%E4%B9%A0%E7%B3%BB%E5%88%97-05-vec-engine%E5%90%91%E9%87%8F%E8%AE%A1%E7%AE%97%E5%BC%95%E6%93%8E/" title="Tiny-NPU学习系列-05-vec_engine向量计算引擎"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-07-14</div><div class="info-item-2">Tiny-NPU学习系列-05-vec_engine向量计算引擎</div></div><div class="info-2"><div class="info-item-1">vec_engine 向量计算引擎Tiny-NPU学习系列-00-导读Tiny-NPU学习系列-01-AI芯片学习路线Tiny-NPU学习系列-02-sram_dp双端口SRAMTiny-NPU学习系列-03-banked_sram多Bank存储Tiny-NPU学习系列-04-kv_cache_bank缓存模块Tiny-NPU学习系列-05-vec_engine向量计算引擎Tiny-NPU学习系列-06-gelu_engine激活函数引擎  模块简介vec_engine 主要用来实现向量逐元素计算，当前支持四种操作：  ADD：加法 MUL：乘法 SCALE_SHIFT：缩放移位 CLAMP：截断  可以把它理解成一个面向 Transformer 中 element-wise 操作的小型向量引擎，例如 residual add 里的 x + sublayer_output。它的核心工作流程是： 1接收命令 -&gt; 读取 SRAM -&gt; 等待读数据 -&gt; 执行计算 -&gt; 写回 SRAM -&gt; 完成  另外，这个模块还支持 copy2d_mode。这个模式...</div></div></div></a><a class="pagination-related" href="/2026/07/14/Tiny-NPU%E5%AD%A6%E4%B9%A0%E7%B3%BB%E5%88%97-02-sram-dp%E5%8F%8C%E7%AB%AF%E5%8F%A3SRAM/" title="Tiny-NPU学习系列-02-sram_dp双端口SRAM"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-07-14</div><div class="info-item-2">Tiny-NPU学习系列-02-sram_dp双端口SRAM</div></div><div class="info-2"><div class="info-item-1">sram_dp 双端口 SRAMTiny-NPU学习系列-00-导读Tiny-NPU学习系列-01-AI芯片学习路线Tiny-NPU学习系列-02-sram_dp双端口SRAMTiny-NPU学习系列-03-banked_sram多Bank存储Tiny-NPU学习系列-04-kv_cache_bank缓存模块Tiny-NPU学习系列-05-vec_engine向量计算引擎Tiny-NPU学习系列-06-gelu_engine激活函数引擎   这是一个双端口的SRAM，可以同时支持一个端口写与一个端口读； 另外这个SRAM是write-first定义，也就是在写数据时，也会把写入的数据同时输出到dout端口，对应的就是下面这几行代码：1234if (we_a) begin	mem[addr_a] &lt;= din_a;	dout_a &lt;= din_a;end 下面是关于这个模块的仿真波形图  </div></div></div></a><a class="pagination-related" href="/2026/07/10/Tiny-NPU%E5%AD%A6%E4%B9%A0%E7%B3%BB%E5%88%97-00-%E5%AF%BC%E8%AF%BB/" title="Tiny-NPU学习系列-00-导读"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-07-10</div><div class="info-item-2">Tiny-NPU学习系列-00-导读</div></div><div class="info-2"><div class="info-item-1">写在前面这个系列用来系统记录 Tiny-NPU 的学习过程：从 NPU 的基本概念、Tiny-NPU 项目的整体架构，到计算单元、片上存储、数据流、控制逻辑、仿真验证与综合实现，逐步拆解一个小型神经网络加速器的设计方法。 我希望这个系列不是零散的代码记录，而是能把“为什么这样设计”和“硬件上怎么落地”讲清楚。后续每一篇会尽量围绕一个具体问题展开，并保留关键代码、波形、实验现象和踩坑记录。 系列目录Tiny-NPU学习系列-00-导读Tiny-NPU学习系列-01-AI芯片学习路线Tiny-NPU学习系列-02-sram_dp双端口SRAMTiny-NPU学习系列-03-banked_sram多Bank存储Tiny-NPU学习系列-04-kv_cache_bank缓存模块Tiny-NPU学习系列-05-vec_engine向量计算引擎Tiny-NPU学习系列-06-gelu_engine激活函数引擎  已迁移内容00 导读建立系列目标，整理学习路线和后续文章结构。 01 AI 芯片学习路线基于 Tiny-NPU 项目，整理从 SRAM、算子 Engine、GEMM、DMA&#x2F...</div></div></div></a><a class="pagination-related" href="/2026/09/02/Tiny-NPU%E5%AD%A6%E4%B9%A0%E7%B3%BB%E5%88%97-06-gelu-engine%E6%BF%80%E6%B4%BB%E5%87%BD%E6%95%B0%E5%BC%95%E6%93%8E/" title="Tiny-NPU学习系列-06-gelu_engine激活函数引擎"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-09-02</div><div class="info-item-2">Tiny-NPU学习系列-06-gelu_engine激活函数引擎</div></div><div class="info-2"><div class="info-item-1">gelu_engine 激活函数引擎Tiny-NPU学习系列-00-导读Tiny-NPU学习系列-01-AI芯片学习路线Tiny-NPU学习系列-02-sram_dp双端口SRAMTiny-NPU学习系列-03-banked_sram多Bank存储Tiny-NPU学习系列-04-kv_cache_bank缓存模块Tiny-NPU学习系列-05-vec_engine向量计算引擎Tiny-NPU学习系列-06-gelu_engine激活函数引擎  模块介绍gelu_engine 主要用来实现 SiLU 和 GeLU 两个激活函数。激活函数的值不是在硬件里实时计算，而是通过两个查找表读取，分别对应 silu_lut 和 gelu_lut。 整体流程和 vec_engine 很像：先从 SRAM 中读取输入数据，再把读出的数据作为 LUT 地址，查到对应的激活结果后写回目标 SRAM。区别在于 vec_engine 的核心是逐元素算术运算，而 gelu_engine 的核心是查表。 代码解析模块端口如下： 12345678910111213141516171819202122module...</div></div></div></a><a class="pagination-related" href="/2026/07/14/Tiny-NPU%E5%AD%A6%E4%B9%A0%E7%B3%BB%E5%88%97-04-kv-cache-bank%E7%BC%93%E5%AD%98%E6%A8%A1%E5%9D%97/" title="Tiny-NPU学习系列-04-kv_cache_bank缓存模块"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-07-14</div><div class="info-item-2">Tiny-NPU学习系列-04-kv_cache_bank缓存模块</div></div><div class="info-2"><div class="info-item-1">kv_cache_bank 缓存模块Tiny-NPU学习系列-00-导读Tiny-NPU学习系列-01-AI芯片学习路线Tiny-NPU学习系列-02-sram_dp双端口SRAMTiny-NPU学习系列-03-banked_sram多Bank存储Tiny-NPU学习系列-04-kv_cache_bank缓存模块Tiny-NPU学习系列-05-vec_engine向量计算引擎Tiny-NPU学习系列-06-gelu_engine激活函数引擎  模块简介 这个模块主要是用来实现KV缓存的，在写入的时候只需要写入一个向量，再读出的时候可以读取多个向量； 写入和读出的不同是因为KV Cache的工作需要。在计算第t输出的时候，先计算出Qt, Kt, Vt，然后将计算出的Kt, Vt写入到KV Cache中，因此写只需要写一个。到了需要计算第t个输出的时候，需要将前面所有的KV与当前的Qt进行计算，所以读出的时候就需要将所有的KV读出，因此就需要读出多个向量； KV Cache的原理如下所示，具体的讲解可以参考博客 这里注意一下读出时序的问题，由于sram是同步读出的，所以读出数据是要延...</div></div></div></a><a class="pagination-related" href="/2026/07/14/Tiny-NPU%E5%AD%A6%E4%B9%A0%E7%B3%BB%E5%88%97-03-banked-sram%E5%A4%9ABank%E5%AD%98%E5%82%A8/" title="Tiny-NPU学习系列-03-banked_sram多Bank存储"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-07-14</div><div class="info-item-2">Tiny-NPU学习系列-03-banked_sram多Bank存储</div></div><div class="info-2"><div class="info-item-1">banked_sram 多 Bank 存储Tiny-NPU学习系列-00-导读Tiny-NPU学习系列-01-AI芯片学习路线Tiny-NPU学习系列-02-sram_dp双端口SRAMTiny-NPU学习系列-03-banked_sram多Bank存储Tiny-NPU学习系列-04-kv_cache_bank缓存模块Tiny-NPU学习系列-05-vec_engine向量计算引擎Tiny-NPU学习系列-06-gelu_engine激活函数引擎   这个是集成了多个SRAM bank，通过bank_sel对bank进行选择，模块端口如下； 123456789101112131415161718192021222324module banked_sram #(	parameter int NUM_BANKS = 4,	parameter int BANK_DEPTH = 4096,	parameter int DATA_W = 8,	parameter int PINGPONG = 0,	parameter int ADDR_W = $clog2(BANK_DEPTH),	par...</div></div></div></a></div></div></div><div class="aside-content" id="aside-content"><div class="card-widget card-info text-center"><div class="avatar-img"><img src="/img/avatar.jpg" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="author-info-name">云上我最菜</div><div class="author-info-description">这个人很懒，什么都没有写。。。。。。</div><div class="site-data"><a href="/archives/"><div class="headline">文章</div><div class="length-num">15</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">28</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">5</div></a></div><a id="card-info-btn" target="_blank" rel="noopener" href="https://github.com/yswzc"><i class="fab fa-github"></i><span>关注</span></a><div class="card-info-social-icons"><a class="social-icon" href="https://github.com/yswzc" target="_blank" title="Github"><i class="fab fa-github" style="color: #24292e;"></i></a><a class="social-icon" href="/1173919852@qq.com" target="_blank" title="Email"><i class="fas fa-envelope" style="color: #4a7dbe;"></i></a><a class="social-icon" href="https://u.wechat.com/EKhtwGZQoYO6ShttK4tWXDo" target="_blank" title="WeChat"><i class="fab fa-weixin"></i></a><a class="social-icon" href="tencent://AddContact/?fromId=45&amp;fromSubId=1&amp;subcmd=all&amp;uin=1173919852&amp;website=www.oicqzone.com" target="_blank" title="QQ"><i class="fab fa-qq"></i></a></div></div><div class="card-widget card-announcement"><div class="item-headline"><i class="fas fa-bullhorn fa-shake"></i><span>公告</span></div><div class="announcement_content">This is my Blog</div></div><div class="sticky_layout"><div class="card-widget" id="card-toc"><div class="item-headline"><i class="fas fa-stream"></i><span>目录</span><span class="toc-percentage"></span></div><div class="toc-content"><ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#tiny-NPU-AI%E8%8A%AF%E7%89%87%E5%AD%A6%E4%B9%A0%E8%B7%AF%E7%BA%BF"><span class="toc-number">1.</span> <span class="toc-text">tiny-NPU AI芯片学习路线</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%BF%AB%E9%80%9F%E5%AF%BC%E8%88%AA"><span class="toc-number">1.1.</span> <span class="toc-text">快速导航</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E6%80%BB%E4%BD%93%E6%9E%B6%E6%9E%84%E5%9B%BE"><span class="toc-number">1.2.</span> <span class="toc-text">总体架构图</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0-%E5%AD%A6%E4%B9%A0%E6%96%B9%E6%B3%95"><span class="toc-number">1.3.</span> <span class="toc-text">0. 学习方法</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#1-%E5%AD%98%E5%82%A8%E7%B3%BB%E7%BB%9F-SRAM"><span class="toc-number">1.4.</span> <span class="toc-text">1. 存储系统 SRAM</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E7%9B%AE%E6%A0%87"><span class="toc-number">1.4.1.</span> <span class="toc-text">目标</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E9%87%8D%E7%82%B9%E6%96%87%E4%BB%B6"><span class="toc-number">1.4.2.</span> <span class="toc-text">重点文件</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%BF%85%E9%A1%BB%E6%90%9E%E6%87%82"><span class="toc-number">1.4.3.</span> <span class="toc-text">必须搞懂</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%8A%A8%E6%89%8B%E4%BB%BB%E5%8A%A1"><span class="toc-number">1.4.4.</span> <span class="toc-text">动手任务</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E8%BE%93%E5%87%BA%E7%AC%94%E8%AE%B0"><span class="toc-number">1.4.5.</span> <span class="toc-text">输出笔记</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#2-%E7%AE%80%E5%8D%95%E7%AE%97%E5%AD%90-Engine"><span class="toc-number">1.5.</span> <span class="toc-text">2. 简单算子 Engine</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E7%9B%AE%E6%A0%87-1"><span class="toc-number">1.5.1.</span> <span class="toc-text">目标</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%BB%BA%E8%AE%AE%E9%A1%BA%E5%BA%8F"><span class="toc-number">1.5.2.</span> <span class="toc-text">建议顺序</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%BF%85%E9%A1%BB%E6%90%9E%E6%87%82-1"><span class="toc-number">1.5.3.</span> <span class="toc-text">必须搞懂</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E6%8E%A8%E8%8D%90%E4%BB%BF%E7%9C%9F"><span class="toc-number">1.5.4.</span> <span class="toc-text">推荐仿真</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E8%BE%93%E5%87%BA%E7%AC%94%E8%AE%B0-1"><span class="toc-number">1.5.5.</span> <span class="toc-text">输出笔记</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#3-GEMM-%E4%B8%8E%E8%84%89%E5%8A%A8%E9%98%B5%E5%88%97"><span class="toc-number">1.6.</span> <span class="toc-text">3. GEMM 与脉动阵列</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E7%9B%AE%E6%A0%87-2"><span class="toc-number">1.6.1.</span> <span class="toc-text">目标</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E9%87%8D%E7%82%B9%E6%96%87%E4%BB%B6-1"><span class="toc-number">1.6.2.</span> <span class="toc-text">重点文件</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%BF%85%E9%A1%BB%E6%90%9E%E6%87%82-2"><span class="toc-number">1.6.3.</span> <span class="toc-text">必须搞懂</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E6%8E%A8%E8%8D%90%E7%BB%83%E4%B9%A0"><span class="toc-number">1.6.4.</span> <span class="toc-text">推荐练习</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E8%BE%93%E5%87%BA%E7%AC%94%E8%AE%B0-2"><span class="toc-number">1.6.5.</span> <span class="toc-text">输出笔记</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#4-DMA-%E4%B8%8E-AXI"><span class="toc-number">1.7.</span> <span class="toc-text">4. DMA 与 AXI</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E7%9B%AE%E6%A0%87-3"><span class="toc-number">1.7.1.</span> <span class="toc-text">目标</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E9%87%8D%E7%82%B9%E6%96%87%E4%BB%B6-2"><span class="toc-number">1.7.2.</span> <span class="toc-text">重点文件</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%BF%85%E9%A1%BB%E6%90%9E%E6%87%82-3"><span class="toc-number">1.7.3.</span> <span class="toc-text">必须搞懂</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%BD%93%E5%89%8D%E9%A1%B9%E7%9B%AE%E6%B3%A8%E6%84%8F%E7%82%B9"><span class="toc-number">1.7.4.</span> <span class="toc-text">当前项目注意点</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E8%BE%93%E5%87%BA%E7%AC%94%E8%AE%B0-3"><span class="toc-number">1.7.5.</span> <span class="toc-text">输出笔记</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#5-%E5%BE%AE%E7%A0%81%E6%8E%A7%E5%88%B6%E4%B8%8E%E8%B0%83%E5%BA%A6"><span class="toc-number">1.8.</span> <span class="toc-text">5. 微码控制与调度</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E7%9B%AE%E6%A0%87-4"><span class="toc-number">1.8.1.</span> <span class="toc-text">目标</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E9%87%8D%E7%82%B9%E6%96%87%E4%BB%B6-3"><span class="toc-number">1.8.2.</span> <span class="toc-text">重点文件</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%BF%85%E9%A1%BB%E6%90%9E%E6%87%82-4"><span class="toc-number">1.8.3.</span> <span class="toc-text">必须搞懂</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E6%8E%A8%E8%8D%90%E4%BB%BF%E7%9C%9F-1"><span class="toc-number">1.8.4.</span> <span class="toc-text">推荐仿真</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E8%BE%93%E5%87%BA%E7%AC%94%E8%AE%B0-4"><span class="toc-number">1.8.5.</span> <span class="toc-text">输出笔记</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#6-Transformer-Block-%E6%98%A0%E5%B0%84"><span class="toc-number">1.9.</span> <span class="toc-text">6. Transformer Block 映射</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E7%9B%AE%E6%A0%87-5"><span class="toc-number">1.9.1.</span> <span class="toc-text">目标</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E9%87%8D%E7%82%B9%E6%96%87%E4%BB%B6-4"><span class="toc-number">1.9.2.</span> <span class="toc-text">重点文件</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#GPT-2-Block-%E6%95%B0%E6%8D%AE%E6%B5%81"><span class="toc-number">1.9.3.</span> <span class="toc-text">GPT-2 Block 数据流</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%BF%85%E9%A1%BB%E6%90%9E%E6%87%82-5"><span class="toc-number">1.9.4.</span> <span class="toc-text">必须搞懂</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E6%8E%A8%E8%8D%90%E4%BB%BF%E7%9C%9F-2"><span class="toc-number">1.9.5.</span> <span class="toc-text">推荐仿真</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E8%BE%93%E5%87%BA%E7%AC%94%E8%AE%B0-5"><span class="toc-number">1.9.6.</span> <span class="toc-text">输出笔记</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#7-ONNX-Graph-Mode"><span class="toc-number">1.10.</span> <span class="toc-text">7. ONNX Graph Mode</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E7%9B%AE%E6%A0%87-6"><span class="toc-number">1.10.1.</span> <span class="toc-text">目标</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E9%87%8D%E7%82%B9%E6%96%87%E4%BB%B6-5"><span class="toc-number">1.10.2.</span> <span class="toc-text">重点文件</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%BF%85%E9%A1%BB%E6%90%9E%E6%87%82-6"><span class="toc-number">1.10.3.</span> <span class="toc-text">必须搞懂</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E6%8E%A8%E8%8D%90%E4%BB%BF%E7%9C%9F-3"><span class="toc-number">1.10.4.</span> <span class="toc-text">推荐仿真</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E8%BE%93%E5%87%BA%E7%AC%94%E8%AE%B0-6"><span class="toc-number">1.10.5.</span> <span class="toc-text">输出笔记</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#8-%E6%AF%8F%E5%91%A8%E5%AE%89%E6%8E%92"><span class="toc-number">1.11.</span> <span class="toc-text">8. 每周安排</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#Week-1-SRAM-%E4%B8%8E%E6%B3%A2%E5%BD%A2"><span class="toc-number">1.11.1.</span> <span class="toc-text">Week 1: SRAM 与波形</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Week-2-Vec-GELU-LayerNorm"><span class="toc-number">1.11.2.</span> <span class="toc-text">Week 2: Vec&#x2F;GELU&#x2F;LayerNorm</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Week-3-GEMM"><span class="toc-number">1.11.3.</span> <span class="toc-text">Week 3: GEMM</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Week-4-DMA-AXI"><span class="toc-number">1.11.4.</span> <span class="toc-text">Week 4: DMA&#x2F;AXI</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Week-5-Microcode-%E6%8E%A7%E5%88%B6"><span class="toc-number">1.11.5.</span> <span class="toc-text">Week 5: Microcode 控制</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Week-6-GPT-2-Block"><span class="toc-number">1.11.6.</span> <span class="toc-text">Week 6: GPT-2 Block</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Week-7-ONNX-%E4%B8%8E%E6%80%A7%E8%83%BD"><span class="toc-number">1.11.7.</span> <span class="toc-text">Week 7+: ONNX 与性能</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#9-%E6%A8%A1%E5%9D%97%E5%A4%8D%E7%9B%98%E6%A8%A1%E6%9D%BF"><span class="toc-number">1.12.</span> <span class="toc-text">9. 模块复盘模板</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%85%B3%E9%94%AE%E6%97%B6%E5%BA%8F"><span class="toc-number">1.13.</span> <span class="toc-text">关键时序</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E6%95%B0%E6%8D%AE%E6%B5%81"><span class="toc-number">1.14.</span> <span class="toc-text">数据流</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E6%88%91%E4%B8%8D%E6%87%82%E7%9A%84%E9%97%AE%E9%A2%98"><span class="toc-number">1.15.</span> <span class="toc-text">我不懂的问题</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%92%8C%E5%85%B6%E4%BB%96%E6%A8%A1%E5%9D%97%E7%9A%84%E5%85%B3%E7%B3%BB"><span class="toc-number">1.16.</span> <span class="toc-text">和其他模块的关系</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%BB%BF%E7%9C%9F-%E6%B3%A2%E5%BD%A2%E8%AE%B0%E5%BD%95"><span class="toc-number">1.17.</span> <span class="toc-text">仿真&#x2F;波形记录</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#RTL-%E4%BB%BF%E7%9C%9F%E5%B7%A5%E5%85%B7"><span class="toc-number">1.17.1.</span> <span class="toc-text">RTL 仿真工具</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%B7%B2%E7%9F%A5%E4%BF%AE%E6%94%B9%E8%AE%B0%E5%BD%95"><span class="toc-number">1.17.2.</span> <span class="toc-text">已知修改记录</span></a></li></ol></li></ol></li></ol></div></div><div class="card-widget card-post-series"><div class="item-headline"><i class="fa-solid fa-layer-group"></i><span>系列文章</span></div><div class="aside-list"><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2026/09/02/Tiny-NPU%E5%AD%A6%E4%B9%A0%E7%B3%BB%E5%88%97-06-gelu-engine%E6%BF%80%E6%B4%BB%E5%87%BD%E6%95%B0%E5%BC%95%E6%93%8E/" title="Tiny-NPU学习系列-06-gelu_engine激活函数引擎">Tiny-NPU学习系列-06-gelu_engine激活函数引擎</a><time datetime="2026-09-02T14:52:14.000Z" title="发表于 2026-09-02 22:52:14">2026-09-02</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2026/07/14/Tiny-NPU%E5%AD%A6%E4%B9%A0%E7%B3%BB%E5%88%97-05-vec-engine%E5%90%91%E9%87%8F%E8%AE%A1%E7%AE%97%E5%BC%95%E6%93%8E/" title="Tiny-NPU学习系列-05-vec_engine向量计算引擎">Tiny-NPU学习系列-05-vec_engine向量计算引擎</a><time datetime="2026-07-14T01:40:00.000Z" title="发表于 2026-07-14 09:40:00">2026-07-14</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2026/07/14/Tiny-NPU%E5%AD%A6%E4%B9%A0%E7%B3%BB%E5%88%97-04-kv-cache-bank%E7%BC%93%E5%AD%98%E6%A8%A1%E5%9D%97/" title="Tiny-NPU学习系列-04-kv_cache_bank缓存模块">Tiny-NPU学习系列-04-kv_cache_bank缓存模块</a><time datetime="2026-07-14T01:30:00.000Z" title="发表于 2026-07-14 09:30:00">2026-07-14</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2026/07/14/Tiny-NPU%E5%AD%A6%E4%B9%A0%E7%B3%BB%E5%88%97-03-banked-sram%E5%A4%9ABank%E5%AD%98%E5%82%A8/" title="Tiny-NPU学习系列-03-banked_sram多Bank存储">Tiny-NPU学习系列-03-banked_sram多Bank存储</a><time datetime="2026-07-14T01:20:00.000Z" title="发表于 2026-07-14 09:20:00">2026-07-14</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2026/07/14/Tiny-NPU%E5%AD%A6%E4%B9%A0%E7%B3%BB%E5%88%97-02-sram-dp%E5%8F%8C%E7%AB%AF%E5%8F%A3SRAM/" title="Tiny-NPU学习系列-02-sram_dp双端口SRAM">Tiny-NPU学习系列-02-sram_dp双端口SRAM</a><time datetime="2026-07-14T01:10:00.000Z" title="发表于 2026-07-14 09:10:00">2026-07-14</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2026/07/14/Tiny-NPU%E5%AD%A6%E4%B9%A0%E7%B3%BB%E5%88%97-01-AI%E8%8A%AF%E7%89%87%E5%AD%A6%E4%B9%A0%E8%B7%AF%E7%BA%BF/" title="Tiny-NPU学习系列-01-AI芯片学习路线">Tiny-NPU学习系列-01-AI芯片学习路线</a><time datetime="2026-07-14T01:00:00.000Z" title="发表于 2026-07-14 09:00:00">2026-07-14</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2026/07/10/Tiny-NPU%E5%AD%A6%E4%B9%A0%E7%B3%BB%E5%88%97-00-%E5%AF%BC%E8%AF%BB/" title="Tiny-NPU学习系列-00-导读">Tiny-NPU学习系列-00-导读</a><time datetime="2026-07-09T16:00:00.000Z" title="发表于 2026-07-10 00:00:00">2026-07-10</time></div></div></div></div><div class="card-widget card-recent-post"><div class="item-headline"><i class="fas fa-history"></i><span>最新文章</span></div><div class="aside-list"><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2026/09/02/Tiny-NPU%E5%AD%A6%E4%B9%A0%E7%B3%BB%E5%88%97-06-gelu-engine%E6%BF%80%E6%B4%BB%E5%87%BD%E6%95%B0%E5%BC%95%E6%93%8E/" title="Tiny-NPU学习系列-06-gelu_engine激活函数引擎">Tiny-NPU学习系列-06-gelu_engine激活函数引擎</a><time datetime="2026-09-02T14:52:14.000Z" title="发表于 2026-09-02 22:52:14">2026-09-02</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2026/07/14/Tiny-NPU%E5%AD%A6%E4%B9%A0%E7%B3%BB%E5%88%97-05-vec-engine%E5%90%91%E9%87%8F%E8%AE%A1%E7%AE%97%E5%BC%95%E6%93%8E/" title="Tiny-NPU学习系列-05-vec_engine向量计算引擎">Tiny-NPU学习系列-05-vec_engine向量计算引擎</a><time datetime="2026-07-14T01:40:00.000Z" title="发表于 2026-07-14 09:40:00">2026-07-14</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2026/07/14/Tiny-NPU%E5%AD%A6%E4%B9%A0%E7%B3%BB%E5%88%97-04-kv-cache-bank%E7%BC%93%E5%AD%98%E6%A8%A1%E5%9D%97/" title="Tiny-NPU学习系列-04-kv_cache_bank缓存模块">Tiny-NPU学习系列-04-kv_cache_bank缓存模块</a><time datetime="2026-07-14T01:30:00.000Z" title="发表于 2026-07-14 09:30:00">2026-07-14</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2026/07/14/Tiny-NPU%E5%AD%A6%E4%B9%A0%E7%B3%BB%E5%88%97-03-banked-sram%E5%A4%9ABank%E5%AD%98%E5%82%A8/" title="Tiny-NPU学习系列-03-banked_sram多Bank存储">Tiny-NPU学习系列-03-banked_sram多Bank存储</a><time datetime="2026-07-14T01:20:00.000Z" title="发表于 2026-07-14 09:20:00">2026-07-14</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2026/07/14/Tiny-NPU%E5%AD%A6%E4%B9%A0%E7%B3%BB%E5%88%97-02-sram-dp%E5%8F%8C%E7%AB%AF%E5%8F%A3SRAM/" title="Tiny-NPU学习系列-02-sram_dp双端口SRAM">Tiny-NPU学习系列-02-sram_dp双端口SRAM</a><time datetime="2026-07-14T01:10:00.000Z" title="发表于 2026-07-14 09:10:00">2026-07-14</time></div></div></div></div></div></div></main><footer id="footer"><div class="footer-other"><div class="footer-copyright"><span class="copyright">&copy;&nbsp;2020 - 2026 By 云上我最菜</span></div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="readmode" type="button" title="阅读模式"><i class="fas fa-book-open"></i></button><button id="translateLink" type="button" title="简繁转换">繁</button><button id="darkmode" type="button" title="日间和夜间模式切换"><i class="fas fa-adjust"></i></button><button id="hide-aside-btn" type="button" title="单栏和双栏切换"><i class="fas fa-arrows-alt-h"></i></button></div><div id="rightside-config-show"><button id="rightside-config" type="button" title="设置"><i class="fas fa-cog fa-spin"></i></button><button class="close" id="mobile-toc-button" type="button" title="目录"><i class="fas fa-list-ul"></i></button><button id="go-up" type="button" title="回到顶部"><span class="scroll-percent"></span><i class="fas fa-arrow-up"></i></button></div></div><div><script src="/js/utils.js?v=5.5.4"></script><script src="/js/main.js?v=5.5.4"></script><script src="/js/tw_cn.js?v=5.5.4"></script><div class="js-pjax"><script>(() => {
+  const parseViewBox = viewBox => {
+    if (!viewBox) return null
+    const parts = viewBox.trim().split(/[\s,]+/).map(n => Number(n))
+    if (parts.length !== 4 || parts.some(n => Number.isNaN(n))) return null
+    return parts
+  }
+
+  const getSvgViewBox = svg => {
+    const attr = parseViewBox(svg.getAttribute('viewBox'))
+    if (attr) return attr
+
+    // Fallback: use bbox to build a viewBox
+    try {
+      const bbox = svg.getBBox()
+      if (bbox && bbox.width && bbox.height) return [bbox.x, bbox.y, bbox.width, bbox.height]
+    } catch (e) {
+      // getBBox may fail on some edge cases; ignore
+    }
+
+    const w = Number(svg.getAttribute('width')) || 0
+    const h = Number(svg.getAttribute('height')) || 0
+    if (w > 0 && h > 0) return [0, 0, w, h]
+    return [0, 0, 100, 100]
+  }
+
+  const setSvgViewBox = (svg, vb) => {
+    svg.setAttribute('viewBox', `${vb[0]} ${vb[1]} ${vb[2]} ${vb[3]}`)
+  }
+
+  const clamp = (v, min, max) => Math.max(min, Math.min(max, v))
+
+  const openSvgInNewTab = ({ source, initViewBox }) => {
+    const getClonedSvg = () => {
+      if (typeof source === 'string') {
+        const template = document.createElement('template')
+        template.innerHTML = source.trim()
+        const svg = template.content.querySelector('svg')
+        return svg ? svg.cloneNode(true) : null
+      }
+      if (source && typeof source.cloneNode === 'function') {
+        return source.cloneNode(true)
+      }
+      return null
+    }
+
+    const clone = getClonedSvg()
+    if (!clone) return
+    if (initViewBox && initViewBox.length === 4) {
+      clone.setAttribute('viewBox', initViewBox.join(' '))
+    }
+    if (!clone.getAttribute('xmlns')) clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg')
+    if (!clone.getAttribute('xmlns:xlink') && clone.outerHTML.includes('xlink:')) {
+      clone.setAttribute('xmlns:xlink', 'http://www.w3.org/1999/xlink')
+    }
+    // inject background to match current theme
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark'
+    const bg = getComputedStyle(document.body).backgroundColor || (isDark ? '#1e1e1e' : '#ffffff')
+    if (!clone.style.background) clone.style.background = bg
+
+    const serializer = new XMLSerializer()
+    const svgSource = serializer.serializeToString(clone)
+    const htmlSource = `<!doctype html><html><head><meta charset="utf-8" />
+      <style>
+        html, body { width: 100%; height: 100%; margin: 0; display: flex; align-items: center; justify-content: center; background: ${bg}; }
+        svg { max-width: 100%; max-height: 100%; height: auto; width: auto; }
+      </style>
+      </head><body>${svgSource}</body></html>`
+    const blob = new Blob([htmlSource], { type: 'text/html;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    window.open(url, '_blank', 'noopener')
+    setTimeout(() => URL.revokeObjectURL(url), 30000)
+  }
+
+  const attachMermaidViewerButton = wrap => {
+    let btn = wrap.querySelector('.mermaid-open-btn')
+    if (!btn) {
+      btn = document.createElement('button')
+      btn.type = 'button'
+      btn.className = 'mermaid-open-btn'
+      wrap.appendChild(btn)
+    }
+
+    btn.innerHTML = '<i class="fa fa-search fa-fw" aria-hidden="true"></i>'
+
+    if (!btn.__mermaidViewerBound) {
+      btn.addEventListener('click', e => {
+        e.preventDefault()
+        e.stopPropagation()
+        const svg = wrap.__mermaidOriginalSvg || wrap.querySelector('svg')
+        if (!svg) return
+        const initViewBox = wrap.__mermaidInitViewBox
+        if (typeof svg === 'string') {
+          openSvgInNewTab({ source: svg, initViewBox })
+          return
+        }
+        openSvgInNewTab({ source: svg, initViewBox })
+      })
+      btn.__mermaidViewerBound = true
+    }
+  }
+
+  // Zoom around a point (px, py) in the SVG viewport (in viewBox coordinates)
+  const zoomAtPoint = (vb, factor, px, py) => {
+    const w = vb[2] * factor
+    const h = vb[3] * factor
+    const nx = px - (px - vb[0]) * factor
+    const ny = py - (py - vb[1]) * factor
+    return [nx, ny, w, h]
+  }
+
+  const initMermaidGestures = wrap => {
+    const svg = wrap.querySelector('svg')
+    if (!svg) return
+
+    // Ensure viewBox exists so gestures always work
+    const initVb = getSvgViewBox(svg)
+    wrap.__mermaidInitViewBox = initVb
+    wrap.__mermaidCurViewBox = initVb.slice()
+    setSvgViewBox(svg, initVb)
+
+    // Avoid binding multiple times on themeChange/pjax
+    if (wrap.__mermaidGestureBound) return
+    wrap.__mermaidGestureBound = true
+
+    // Helper: map client (viewport) coordinate -> viewBox coordinate
+    const clientToViewBox = (clientX, clientY) => {
+      const rect = svg.getBoundingClientRect()
+      const vb = wrap.__mermaidCurViewBox || getSvgViewBox(svg)
+      const x = vb[0] + (clientX - rect.left) * (vb[2] / rect.width)
+      const y = vb[1] + (clientY - rect.top) * (vb[3] / rect.height)
+      return { x, y, rect, vb }
+    }
+
+    const state = {
+      pointers: new Map(),
+      startVb: null,
+      startDist: 0,
+      startCenter: null
+    }
+
+    const clampVb = vb => {
+      const init = wrap.__mermaidInitViewBox || vb
+      const minW = init[2] * 0.1
+      const maxW = init[2] * 10
+      const minH = init[3] * 0.1
+      const maxH = init[3] * 10
+      vb[2] = clamp(vb[2], minW, maxW)
+      vb[3] = clamp(vb[3], minH, maxH)
+      return vb
+    }
+
+    const setCurVb = vb => {
+      vb = clampVb(vb)
+      wrap.__mermaidCurViewBox = vb
+      setSvgViewBox(svg, vb)
+    }
+
+    const onPointerDown = e => {
+      // Allow only primary button for mouse
+      if (e.pointerType === 'mouse' && e.button !== 0) return
+      svg.setPointerCapture(e.pointerId)
+      state.pointers.set(e.pointerId, { x: e.clientX, y: e.clientY })
+
+      if (state.pointers.size === 1) {
+        state.startVb = (wrap.__mermaidCurViewBox || getSvgViewBox(svg)).slice()
+      } else if (state.pointers.size === 2) {
+        const pts = [...state.pointers.values()]
+        const dx = pts[0].x - pts[1].x
+        const dy = pts[0].y - pts[1].y
+        state.startDist = Math.hypot(dx, dy)
+        state.startVb = (wrap.__mermaidCurViewBox || getSvgViewBox(svg)).slice()
+        state.startCenter = { x: (pts[0].x + pts[1].x) / 2, y: (pts[0].y + pts[1].y) / 2 }
+      }
+    }
+
+    const onPointerMove = e => {
+      if (!state.pointers.has(e.pointerId)) return
+      state.pointers.set(e.pointerId, { x: e.clientX, y: e.clientY })
+
+      // Pan with 1 pointer
+      if (state.pointers.size === 1 && state.startVb) {
+        const p = [...state.pointers.values()][0]
+        const prev = { x: e.clientX - e.movementX, y: e.clientY - e.movementY }
+        // movementX/Y unreliable on touch, compute from stored last position
+        const last = wrap.__mermaidLastSinglePointer || p
+        const dxClient = p.x - last.x
+        const dyClient = p.y - last.y
+        wrap.__mermaidLastSinglePointer = p
+
+        const { rect } = clientToViewBox(p.x, p.y)
+        const vb = (wrap.__mermaidCurViewBox || getSvgViewBox(svg)).slice()
+        const dx = dxClient * (vb[2] / rect.width)
+        const dy = dyClient * (vb[3] / rect.height)
+        setCurVb([vb[0] - dx, vb[1] - dy, vb[2], vb[3]])
+        return
+      }
+
+      // Pinch zoom with 2 pointers
+      if (state.pointers.size === 2 && state.startVb && state.startDist > 0) {
+        const pts = [...state.pointers.values()]
+        const dx = pts[0].x - pts[1].x
+        const dy = pts[0].y - pts[1].y
+        const dist = Math.hypot(dx, dy)
+        if (!dist) return
+        const factor = state.startDist / dist // dist bigger => zoom in (viewBox smaller)
+
+        const cx = (pts[0].x + pts[1].x) / 2
+        const cy = (pts[0].y + pts[1].y) / 2
+        const centerClient = { x: cx, y: cy }
+
+        const pxy = clientToViewBox(centerClient.x, centerClient.y)
+        const cpx = pxy.x
+        const cpy = pxy.y
+
+        const vb = zoomAtPoint(state.startVb, factor, cpx, cpy)
+        setCurVb(vb)
+      }
+    }
+
+    const onPointerUpOrCancel = e => {
+      state.pointers.delete(e.pointerId)
+      if (state.pointers.size === 0) {
+        state.startVb = null
+        state.startDist = 0
+        state.startCenter = null
+        wrap.__mermaidLastSinglePointer = null
+      } else if (state.pointers.size === 1) {
+        // reset single pointer baseline to avoid jump
+        wrap.__mermaidLastSinglePointer = [...state.pointers.values()][0]
+      }
+    }
+
+    // Wheel zoom (mouse/trackpad)
+    const onWheel = e => {
+      // ctrlKey on mac trackpad pinch; we treat both as zoom
+      e.preventDefault()
+      const delta = e.deltaY
+      const zoomFactor = delta > 0 ? 1.1 : 0.9
+      const { x, y } = clientToViewBox(e.clientX, e.clientY)
+      const vb = (wrap.__mermaidCurViewBox || getSvgViewBox(svg)).slice()
+      setCurVb(zoomAtPoint(vb, zoomFactor, x, y))
+    }
+
+    const onDblClick = () => {
+      const init = wrap.__mermaidInitViewBox
+      if (!init) return
+      wrap.__mermaidCurViewBox = init.slice()
+      setSvgViewBox(svg, init)
+    }
+
+    svg.addEventListener('pointerdown', onPointerDown)
+    svg.addEventListener('pointermove', onPointerMove)
+    svg.addEventListener('pointerup', onPointerUpOrCancel)
+    svg.addEventListener('pointercancel', onPointerUpOrCancel)
+    svg.addEventListener('wheel', onWheel, { passive: false })
+    svg.addEventListener('dblclick', onDblClick)
+  }
+
+  const runMermaid = ele => {
+    window.loadMermaid = true
+    const theme = document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'default'
+
+    ele.forEach((item, index) => {
+      const mermaidSrc = item.firstElementChild
+
+      // Clear old render (themeChange/pjax will rerun)
+      const oldSvg = item.querySelector('svg')
+      if (oldSvg) oldSvg.remove()
+      item.__mermaidGestureBound = false
+
+      const config = mermaidSrc.dataset.config ? JSON.parse(mermaidSrc.dataset.config) : {}
+      if (!config.theme) {
+        config.theme = theme
+      }
+      const mermaidThemeConfig = `%%{init: ${JSON.stringify(config)}}%%\n`
+      const mermaidID = `mermaid-${index}`
+      const mermaidDefinition = mermaidThemeConfig + mermaidSrc.textContent
+
+      const renderFn = mermaid.render(mermaidID, mermaidDefinition)
+      const renderMermaid = svg => {
+        mermaidSrc.insertAdjacentHTML('afterend', svg)
+        if (true) initMermaidGestures(item)
+        item.__mermaidOriginalSvg = svg
+        if (true) attachMermaidViewerButton(item)
+      }
+
+
+      // mermaid v9 and v10 compatibility
+      typeof renderFn === 'string' ? renderMermaid(renderFn) : renderFn.then(({ svg }) => renderMermaid(svg))
+    })
+  }
+
+  const codeToMermaid = () => {
+    const codeMermaidEle = document.querySelectorAll('pre > code.mermaid')
+    if (codeMermaidEle.length === 0) return
+
+    codeMermaidEle.forEach(ele => {
+      const preEle = document.createElement('pre')
+      preEle.className = 'mermaid-src'
+      preEle.hidden = true
+      preEle.textContent = ele.textContent
+      const newEle = document.createElement('div')
+      newEle.className = 'mermaid-wrap'
+      newEle.appendChild(preEle)
+      ele.parentNode.replaceWith(newEle)
+    })
+  }
+
+  const loadMermaid = () => {
+    if (false) codeToMermaid()
+    const $mermaid = document.querySelectorAll('#article-container .mermaid-wrap')
+    if ($mermaid.length === 0) return
+
+    const runMermaidFn = () => runMermaid($mermaid)
+    btf.addGlobalFn('themeChange', runMermaidFn, 'mermaid')
+    window.loadMermaid ? runMermaidFn() : btf.getScript('https://cdn.jsdelivr.net/npm/mermaid@11.12.2/dist/mermaid.min.js').then(runMermaidFn)
+  }
+
+  btf.addGlobalFn('encrypt', loadMermaid, 'mermaid')
+  window.pjax ? loadMermaid() : document.addEventListener('DOMContentLoaded', loadMermaid)
+})()</script></div><canvas class="fireworks" mobile="false"></canvas><script src="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1.1.6/dist/fireworks.min.js"></script><script defer="defer" id="fluttering_ribbon" mobile="true" src="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1.1.6/dist/canvas-fluttering-ribbon.min.js"></script><script async data-pjax src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script></div></body></html>
